@@ -20,7 +20,7 @@ public class DependabotIssuesController {
     private static List<Object> getIssues() {
 
         String apiUrl = "https://api.github.com/repos/praveen-kr-22/vulnerable-repo/dependabot/alerts";
-        String token = "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";
+        String token = "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";
         // Create headers with the authorization token and additional headers
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);

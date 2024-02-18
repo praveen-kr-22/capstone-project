@@ -7,9 +7,11 @@ import com.armorcode.capstone.parser.DependabotParser;
 import com.armorcode.capstone.parser.SecretScanParser;
 import com.armorcode.capstone.repository.IssuesRepo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -28,9 +30,13 @@ public class IssuesServices {
     CodeScanParser codeScanParser;
 
 
-    public Iterable<Findings> getAllFindings(){
-        Iterable<Findings> findings = issuesRepo.findAll();
+    public Page<Findings> getAllFindings(Pageable pageable){
+        Page<Findings> findings = issuesRepo.findAll(pageable);
         return findings;
+    }
+
+    public Iterable<Findings> getAllFindings(){
+        return  issuesRepo.findAll();
     }
 
     public void saveAllFindings(Findings findings){
@@ -42,7 +48,7 @@ public class IssuesServices {
     }
 
 
-    public List<Findings> getDependabotIssues() {
+    public List<Findings> getDependabotIssues(Pageable pageable) {
         RestTemplate restTemplate = new RestTemplate();
 
         String url = "http://localhost:8080/issues/dependabot";
@@ -57,7 +63,7 @@ public class IssuesServices {
         return findings;
     }
 
-    public List<Findings> getCodeScanIssues() {
+    public List<Findings> getCodeScanIssues(org.springframework.data.domain.Pageable pageable) {
         RestTemplate restTemplate = new RestTemplate();
 
         String url = "http://localhost:8080/issues/codescan";
@@ -72,7 +78,7 @@ public class IssuesServices {
         return findings;
     }
 
-    public List<Findings> getSecretScanIssues() {
+    public List<Findings> getSecretScanIssues(org.springframework.data.domain.Pageable pageable) {
         RestTemplate restTemplate = new RestTemplate();
 
         String url = "http://localhost:8080/issues/secretscan";
@@ -81,7 +87,9 @@ public class IssuesServices {
 
         String resBody =  response.getBody();
 
-        List<Findings> findings = secretScanParser.parseSecretScanFinding(resBody);
+        Iterable<Findings> oldFindings = getAllFindings();
+
+        List<Findings> findings = secretScanParser.parseSecretScanFinding(resBody,oldFindings);
         return findings;
     }
 

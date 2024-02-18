@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
 import org.springframework.data.elasticsearch.annotations.Document;
 
+import java.util.Date;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -49,4 +50,8 @@ public class Findings {
     private String endLineOfIssue = "N/A";
 
     private String repoName = "N/A";
+
+    private String secretOfSecretScan = "N/A";
+
+    private Date createdAt;
 }

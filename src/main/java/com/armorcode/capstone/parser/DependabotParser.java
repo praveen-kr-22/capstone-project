@@ -1,17 +1,14 @@
 package com.armorcode.capstone.parser;
 
 import com.armorcode.capstone.entity.Findings;
-import com.armorcode.capstone.util.GenerateUniqueID;
-import com.armorcode.capstone.util.SHA256Hashing;
+import com.armorcode.capstone.util.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class DependabotParser {
@@ -22,21 +19,26 @@ public class DependabotParser {
     @Autowired
     SHA256Hashing sha256Hashing;
 
+    @Autowired
+    GetRepoName getRepoName;
+
+    @Autowired
+    GlobalFindingCheck globalFindingCheck;
+
+    @Autowired
+    LocalDupCheck localDuDupCheck;
+
+    @Autowired
+    GetMappingOfFinding getMappingOfFinding;
+
 
     public List<Findings> parseDependabotFinding(String body,Iterable<Findings> oldFindings) {
 
         ObjectMapper objectMapper = new ObjectMapper();
 
-        List<Findings> findings = new ArrayList<>();
-        Map<String,Long> storeHash = new HashMap<>();
-        for(Findings find : oldFindings){
-            String name = find.getName();
-            String ecoSystem = find.getEcoSystem();
-            String summary = find.getSummary();
-            long id = find.getId();
-            String hashString = sha256Hashing.hashing( ecoSystem + name + summary);
-            storeHash.put(hashString,id);
-        }
+
+        Map<String,Long> oldFindingStoreHash = getHashWithID(oldFindings);
+        Map<String , Pair<Findings,Integer>> newFindingStoreHash = new HashMap<>();
 
         try{
             Object[] issues = objectMapper.readValue(body, Object[].class);
@@ -51,15 +53,13 @@ public class DependabotParser {
                     Findings find = (Findings) result.get("finding");
                     String hashString = (String) result.get("hashString");
 
-                    boolean isDup = false;
+                    Integer ID = (Integer) result.get("ID");
 
-                    if(storeHash.containsKey(hashString)){
-                        isDup = true;
-                    }
 
-                    if(!isDup){
-                        findings.add(find);
-                    }
+                    Pair<Findings,Integer> temp = Pair.of(find,ID);
+
+
+                    newFindingStoreHash.put(hashString,temp);
 
                 }
             }
@@ -67,6 +67,11 @@ public class DependabotParser {
         }catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+
+        Map<String, Pair<Findings, Integer>> newFindingHashWithoutLocalDup = localDuDupCheck.localDuDupCheck(newFindingStoreHash);
+
+        List<Findings> findings = globalFindingCheck.getFindingWithoutDup(oldFindingStoreHash,newFindingHashWithoutLocalDup);
+
         System.out.println(findings.size());
         return findings;
     }
@@ -86,23 +91,29 @@ public class DependabotParser {
         String summary = (String) ((Map<?, ?>) security_advisory).get("summary");
         String description = (String) ((Map<?, ?>) security_advisory).get("description");
         double cveScore = (double) ((Map<?, ?>) cvss).get("score");
+        String url = (String) ((Map<?, ?>) issue).get("url");
+
+        String ACStatus = getMappingOfFinding.getMappingForStatus(status);
+        String ACSecurityLevel = getMappingOfFinding.getMappingForSeverity(securityLevel);
 
         Map<String,Object> data = new HashMap<>();
 
         data.put("ecosystem",ecosystem);
         data.put("name",name);
         data.put("number",number);
-        data.put("securityLevel",securityLevel);
-        data.put("status",status);
+        data.put("securityLevel",ACSecurityLevel);
+        data.put("status",ACStatus);
         data.put("summary",summary);
         data.put("description",description);
         data.put("cveScore",cveScore);
+        data.put("url",url);
         return data;
     }
 
 
 
     private Map<String,Object> makeNewFinding(Map<String ,Object> data){
+        String url = (String) data.get("url");
         String ecosystem = (String) data.get("ecosystem");
         String name = (String) data.get("name");
         String summary = (String) data.get("summary");
@@ -110,7 +121,7 @@ public class DependabotParser {
         String hashString = sha256Hashing.hashing(stringToBeHashed);
 
         Integer ID = generateUniqueID.getUniqueID();
-
+        String repoName = getRepoName.getRepoName(url);
 
         Findings find = new Findings();
 
@@ -124,16 +135,33 @@ public class DependabotParser {
         find.setToolName("DB");
         find.setEcoSystem(ecosystem);
         find.setName(name);
+        find.setRepoName(repoName);
+        find.setCreatedAt(new Date());
+        find.setProductName("Demo App 2");
 
-        Map<String ,Object> result = new HashMap<>();
+        Map<String,Object> result = new HashMap<>();
 
         result.put("finding",find);
         result.put("hashString",hashString);
+        result.put("ID",ID);
 
         return result;
     }
 
+    private Map<String, Long> getHashWithID(Iterable<Findings> findings) {
 
+        Map<String,Long> storeHash = new HashMap<>();
+        for(Findings find : findings){
+            String name = find.getName();
+            String ecoSystem = find.getEcoSystem();
+            String summary = find.getSummary();
+            long id = find.getId();
+            String hashString = sha256Hashing.hashing( ecoSystem + name + summary);
+            storeHash.put(hashString,id);
+        }
+
+        return storeHash;
+    }
 
 
 
