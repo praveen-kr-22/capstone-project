@@ -6,6 +6,7 @@ import com.armorcode.capstone.service.KafkaProducerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -35,6 +36,12 @@ import java.util.Objects;
 @RestController
 public class DependabotIssuesController {
 
+    @Value("${github.url}")
+    public static String apiUrl;
+
+    @Value("${github.token}")
+    public static String token;
+
     @Autowired
     FindingsServices findingsServices;
 
@@ -44,8 +51,7 @@ public class DependabotIssuesController {
     @GetMapping("/issues/dependabot")
     private static List<Object> getIssues() {
 
-        String apiUrl = "https://api.github.com/repos/praveen-kr-22/vulnerable-repo/dependabot/alerts";
-        String token = "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";
+
         // Create headers with the authorization token and additional headers
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
@@ -75,10 +81,8 @@ public class DependabotIssuesController {
 
     public ResponseEntity<?> changeDependabotAlertStatus(){
 
-        String apiUrl = "https://api.github.com/repos/praveen-kr-22/vulnerable-repo/dependabot/alerts/2";
-        String githubToken = "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";
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(githubToken);
+        headers.setBearerAuth(token);
 
         // Prepare request body with updated status and dismissed reason
         String requestBody = "{\"state\": \"" + "dismissed" + "\", \"dismissed_reason\": \"" + "tolerable_risk" + "\"}";
@@ -108,8 +112,6 @@ public class DependabotIssuesController {
         int number = findings.getNumber();
 
         String apiUrl = STR."https://api.github.com/repos/praveen-kr-22/vulnerable-repo/dependabot/alerts/\{number}";
-        String token = "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";
-
         try {
             HttpClient httpClient = HttpClients.createDefault();
             HttpPatch httpPatch = new HttpPatch(apiUrl);

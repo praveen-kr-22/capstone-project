@@ -10,6 +10,7 @@ import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClients;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -27,6 +28,9 @@ import java.util.List;
 @RestController
 public class CodeScanIssuesController {
 
+    @Value("${github.token}")
+    private static String token;
+
     @Autowired
     FindingsServices findingsServices;
 
@@ -37,7 +41,6 @@ public class CodeScanIssuesController {
     private static List<Object> getIssues() {
 
         String apiUrl = "https://api.github.com/repos/praveen-kr-22/vulnerable-repo/code-scanning/alerts";
-        String token = "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";
         // Create headers with the authorization token and additional headers
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
@@ -77,8 +80,6 @@ public class CodeScanIssuesController {
         int number = findings.getNumber();
 
         String apiUrl = STR."https://api.github.com/repos/praveen-kr-22/vulnerable-repo/code-scanning/alerts/\{number}";
-        String token = "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";
-
         try {
             HttpClient httpClient = HttpClients.createDefault();
             HttpPatch httpPatch = new HttpPatch(apiUrl);

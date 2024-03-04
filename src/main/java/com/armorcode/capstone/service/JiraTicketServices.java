@@ -5,6 +5,7 @@ import com.armorcode.capstone.entity.Findings;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -18,7 +19,10 @@ public class JiraTicketServices {
 
     String apiUrl = "https://capstoneproject22.atlassian.net/rest/api/2/issue/";
     String username = "kumarp222909@gmail.com";
-    String password = "ATATT3xFfGF0yGWfT52T41Hvu52b5oISqZdrknsG7JJB-ttz0rFYjwnbBLhXZedextbCh21fiDc9eQCl-Shq_21MzsfnF-Y1iSNpoqv6cVoaJx70LuaVVpinBlf7gBqDjmgPrPLclEg02Lm-Y2zbMxshK18uGs5TYRSvIWq_byqb5ly18QaRngA=6A08E6A1";
+
+    @Value("${jira.token}")
+    private static String password;
+
 
 
     public String createNewJiraTicket(Findings findings) {

@@ -6,6 +6,7 @@ import com.armorcode.capstone.repository.TicketRepo;
 import com.armorcode.capstone.rest.TicketController;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
@@ -19,6 +20,9 @@ import java.util.Objects;
 
 @Service
 public class SqlTicketServices {
+
+    @Value("${jira.token}")
+    private static String password;
 
     @Autowired
     TicketRepo ticketRepo;
@@ -46,7 +50,6 @@ public class SqlTicketServices {
 
         String url = "https://capstoneproject22.atlassian.net/rest/api/2/issue/" + key;
         String username = "kumarp222909@gmail.com";
-        String password = "ATATT3xFfGF0yGWfT52T41Hvu52b5oISqZdrknsG7JJB-ttz0rFYjwnbBLhXZedextbCh21fiDc9eQCl-Shq_21MzsfnF-Y1iSNpoqv6cVoaJx70LuaVVpinBlf7gBqDjmgPrPLclEg02Lm-Y2zbMxshK18uGs5TYRSvIWq_byqb5ly18QaRngA=6A08E6A1";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

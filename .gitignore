@@ -33,6 +33,10 @@ build/
 .vscode/
 
 
+### appliction.propertices ###
+src/main/resources/application.properties
+
+
 
 
 ### Self ###
