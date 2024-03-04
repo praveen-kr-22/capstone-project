@@ -5,38 +5,48 @@ import com.armorcode.capstone.entity.Findings;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class GlobalFindingCheck {
 
-    public List<Findings> getFindingWithoutDup(Map<String,Long> oldFindingStoreHash, Map<String, Pair<Findings, Integer>> newFindingHashWithoutLocalDup) {
+    public Map<String,List<Findings>> getFindingWithoutDup(List<Map<String,Object>> oldFindingStoreHash, List<Map<String,Object>> newFindingHashWithoutLocalDup) {
 
-        List<Findings> findings = new ArrayList<>();
+        Map<String,List<Findings>> result = new HashMap<>();
+        List<Findings> newFindings = new ArrayList<>();
+        List<Findings> updatedFindings = new ArrayList<>();
 
-        Iterator<Map.Entry<String, Pair<Findings, Integer>>> iterator = newFindingHashWithoutLocalDup.entrySet().iterator();
+        for (Map<String, Object> newFinding : newFindingHashWithoutLocalDup) {
+            String newHashString = (String) newFinding.get("hashString");
+            String newStatus = (String) newFinding.get("status");
+            Findings newFind = (Findings) newFinding.get("finding");
 
-        while(iterator.hasNext()){
-            Map.Entry<String, Pair<Findings, Integer>> entry = iterator.next();
+            boolean foundInOld = false;
+            for (Map<String, Object> oldFinding : oldFindingStoreHash) {
+                String oldHashString = (String) oldFinding.get("hashString");
+                String oldStatus = (String) oldFinding.get("status");
+                Findings oldFind = (Findings) oldFinding.get("finding");
 
-            String hashString = entry.getKey();
-            Findings find = entry.getValue().getFirst();
-
-            boolean isDup = false;
-
-            if(oldFindingStoreHash.containsKey(hashString)){
-                isDup = true;
+                if (newHashString != null && newHashString.equals(oldHashString)) {
+                    foundInOld = true;
+                    if (newStatus != null && !newStatus.equals(oldStatus)) {
+                        // Status changed, add to updatedFindings
+                        Findings temp = newFind;
+                        temp.setId(oldFind.getId());
+                        updatedFindings.add(temp);
+                    }
+                    break;
+                }
             }
 
-            if(!isDup){
-                findings.add(find);
+            if (!foundInOld) {
+                newFindings.add(newFind);
             }
         }
 
-        return findings;
+        result.put("newFindings",newFindings);
+        result.put("updatedFindings",updatedFindings);
 
+        return result;
     }
 }

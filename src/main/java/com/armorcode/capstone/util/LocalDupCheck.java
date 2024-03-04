@@ -4,31 +4,31 @@ import com.armorcode.capstone.entity.Findings;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class LocalDupCheck {
 
-    public Map<String , Pair<Findings,Integer>> localDuDupCheck(Map<String, Pair<Findings, Integer>> store){
+    public List<Map<String , Object>> localDuDupCheck(List<Map<String, Object>> store){
 
-        Map<String,Pair<Findings,Integer>> result = new HashMap<>();
+        Set<String> storeHash = new HashSet<>();
 
-        Iterator<Map.Entry<String, Pair<Findings, Integer>>> iterator = store.entrySet().iterator();
+        List<Map<String, Object>> uniqueList = new ArrayList<>();
 
-        while(iterator.hasNext()){
-            Map.Entry<String, Pair<Findings, Integer>> entry = iterator.next();
-            String hash = entry.getKey();
-            Pair<Findings, Integer> findWithID = entry.getValue();
-//            System.out.println(hash);
-            if(!result.containsKey(hash)){
-//                System.out.println(findWithID);
-                result.put(hash,findWithID);
+        for (Map<String, Object> map : store) {
+            String hashstring = (String) map.get("hashString");
+
+            if (hashstring != null && !storeHash.contains(hashstring)) {
+                storeHash.add(hashstring);
+                uniqueList.add(map);
             }
-
         }
-
-        return result;
+        return uniqueList;
     }
 }
+
+
+
+// newFindingStoreHash.put("hashString",hashString);
+//                    newFindingStoreHash.put("finding",find);
+//                    newFindingStoreHash.put("status",find.getStatus());

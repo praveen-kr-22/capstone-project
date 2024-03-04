@@ -1,12 +1,16 @@
 package com.armorcode.capstone.rest;
 
 
+import com.armorcode.capstone.dao.UserData;
+import com.armorcode.capstone.entity.Employee;
 import com.armorcode.capstone.entity.Findings;
-import com.armorcode.capstone.service.IssuesServices;
+import com.armorcode.capstone.service.EmployeeService;
+import com.armorcode.capstone.service.FindingsServices;
+import com.armorcode.capstone.util.Jwt;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -18,11 +22,38 @@ import java.util.*;
 public class DashBoardController {
 
     @Autowired
-    IssuesServices issuesServices;
+    FindingsServices findingsServices;
+
+    @Autowired
+    EmployeeService employeeService;
+
+    @Autowired
+    Jwt jwt;
 
     @GetMapping("/allinfo")
-    public Map<String, Map<String, int[]>> getAllDashBoardInformation(){
-        Iterable<Findings> allFindings = issuesServices.getAllFindings();
+    public ResponseEntity<?> getAllDashBoardInformation(@RequestHeader("Authorization") String authorizationHeader) throws Exception {
+
+        String token = authorizationHeader.replace("Bearer ", "");
+
+        UserData user = jwt.getUserIdFromToken(token);
+
+        if(user == null){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User Data Not Found Error");
+        }
+
+        Employee employee = employeeService.getEmployee(user.getEmail());
+
+        if(employee == null){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+
+        String role = employee.getRole();
+
+//
+
+        int ordID = employee.getOrgID();
+
+        Iterable<Findings> allFindings = findingsServices.getAllFindings(ordID);
 
         Map<String,int[]> findingsStatusInfo = getFindingsStatusInfo(allFindings);
         Map<String ,int[]> findingsAge = getNewFindingsAgeInfo(allFindings);
@@ -37,7 +68,9 @@ public class DashBoardController {
         info.put("findingsApp",findingsByApp);
         info.put("findingsOverTime",findingsOverTime);
 
-        return info;
+//        System.out.println(info);
+
+        return ResponseEntity.status(HttpStatus.OK).body(info);
     }
 
     private Map<String, int[]> getFindingsOverTime(Iterable<Findings> allFindings) {
@@ -51,6 +84,7 @@ public class DashBoardController {
         result.put("Dec 2023",new int[1]);
         result.put("Jan 2024",new int[1]);
         result.put("Feb 2024",new int[1]);
+        result.put("Mar 2024",new int[1]);
 
         for(Findings find : allFindings){
             Date createdAt = find.getCreatedAt();
@@ -88,6 +122,10 @@ public class DashBoardController {
                 int[] val = result.get("Feb 2024");
                 val[0]++;
                 result.put("Feb 2024",val);
+            }else if(year == 2024 && month == 3){
+                int[] val = result.get("Mar 2024");
+                val[0]++;
+                result.put("Mar 2024",val);
             }
 
         }

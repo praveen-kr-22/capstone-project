@@ -21,6 +21,8 @@ public class Findings {
     @Id
     private long id;
 
+    private int number;
+
     private String toolName = "N/A";
 
     private String securityLevel = "N/A";
@@ -54,4 +56,8 @@ public class Findings {
     private String secretOfSecretScan = "N/A";
 
     private Date createdAt;
+
+    private Date updatedAt;
+
+    private int orgID;
 }

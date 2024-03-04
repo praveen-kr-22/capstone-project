@@ -32,13 +32,13 @@ public class DependabotParser {
     GetMappingOfFinding getMappingOfFinding;
 
 
-    public List<Findings> parseDependabotFinding(String body,Iterable<Findings> oldFindings) {
+    public Map<String,List<Findings>> parseDependabotFinding(String body,Iterable<Findings> oldFindings,int orgID) {
 
         ObjectMapper objectMapper = new ObjectMapper();
 
 
-        Map<String,Long> oldFindingStoreHash = getHashWithID(oldFindings);
-        Map<String , Pair<Findings,Integer>> newFindingStoreHash = new HashMap<>();
+        List<Map<String,Object>> oldFindingStoreHash = getHashWithID(oldFindings);
+        List<Map<String , Object>> newFindingStoreHash = new ArrayList<>();
 
         try{
             Object[] issues = objectMapper.readValue(body, Object[].class);
@@ -52,14 +52,18 @@ public class DependabotParser {
 
                     Findings find = (Findings) result.get("finding");
                     String hashString = (String) result.get("hashString");
-
                     Integer ID = (Integer) result.get("ID");
+                    find.setOrgID(orgID);
 
 
-                    Pair<Findings,Integer> temp = Pair.of(find,ID);
+                    Map<String,Object> temp = new HashMap<>();
 
 
-                    newFindingStoreHash.put(hashString,temp);
+                    temp.put("hashString",hashString);
+                    temp.put("finding",find);
+                    temp.put("status",find.getStatus());
+
+                    newFindingStoreHash.add(temp);
 
                 }
             }
@@ -68,12 +72,10 @@ public class DependabotParser {
             throw new RuntimeException(e);
         }
 
-        Map<String, Pair<Findings, Integer>> newFindingHashWithoutLocalDup = localDuDupCheck.localDuDupCheck(newFindingStoreHash);
+        List<Map<String, Object>> newFindingHashWithoutLocalDup = localDuDupCheck.localDuDupCheck(newFindingStoreHash);
 
-        List<Findings> findings = globalFindingCheck.getFindingWithoutDup(oldFindingStoreHash,newFindingHashWithoutLocalDup);
 
-        System.out.println(findings.size());
-        return findings;
+        return globalFindingCheck.getFindingWithoutDup(oldFindingStoreHash, newFindingHashWithoutLocalDup);
     }
 
 
@@ -113,6 +115,7 @@ public class DependabotParser {
 
 
     private Map<String,Object> makeNewFinding(Map<String ,Object> data){
+        int number = (int) data.get("number");
         String url = (String) data.get("url");
         String ecosystem = (String) data.get("ecosystem");
         String name = (String) data.get("name");
@@ -125,19 +128,20 @@ public class DependabotParser {
 
         Findings find = new Findings();
 
-
+        find.setNumber(number);
         find.setId(ID);
         find.setDescription((String) data.get("description"));
         find.setStatus((String) data.get("status"));
         find.setSummary(summary);
         find.setCveScore((Double) data.get("cveScore"));
         find.setSecurityLevel((String) data.get("securityLevel"));
-        find.setToolName("DB");
+        find.setToolName("dependabot");
         find.setEcoSystem(ecosystem);
         find.setName(name);
         find.setRepoName(repoName);
         find.setCreatedAt(new Date());
         find.setProductName("Demo App 2");
+        find.setUpdatedAt(new Date());
 
         Map<String,Object> result = new HashMap<>();
 
@@ -148,16 +152,24 @@ public class DependabotParser {
         return result;
     }
 
-    private Map<String, Long> getHashWithID(Iterable<Findings> findings) {
+    private List<Map<String, Object>> getHashWithID(Iterable<Findings> findings) {
 
-        Map<String,Long> storeHash = new HashMap<>();
+        List<Map<String,Object>> storeHash = new ArrayList<>();
         for(Findings find : findings){
             String name = find.getName();
             String ecoSystem = find.getEcoSystem();
             String summary = find.getSummary();
             long id = find.getId();
+            String status = find.getStatus();
             String hashString = sha256Hashing.hashing( ecoSystem + name + summary);
-            storeHash.put(hashString,id);
+
+            Map<String,Object> temp = new HashMap<>();
+
+            temp.put("hashString",hashString);
+            temp.put("finding",find);
+            temp.put("status",status);
+
+            storeHash.add(temp);
         }
 
         return storeHash;

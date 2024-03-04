@@ -36,5 +36,4 @@ public class SHA256Hashing {
         return hexString.toString();
     }
 
-
 }

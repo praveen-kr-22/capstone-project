@@ -32,13 +32,13 @@ public class SecretScanParser {
     GetMappingOfFinding getMappingOfFinding;
 
 
-    public List<Findings> parseSecretScanFinding(String body,Iterable<Findings> oldFindings) {
+    public Map<String,List<Findings>> parseSecretScanFinding(String body,Iterable<Findings> oldFindings,int orgID) {
 
         ObjectMapper objectMapper = new ObjectMapper();
 
 
-        Map<String,Long> oldFindingStoreHash = getHashWithID(oldFindings);
-        Map<String , Pair<Findings,Integer>> newFindingStoreHash = new HashMap<>();
+        List<Map<String,Object>> oldFindingStoreHash = getHashWithID(oldFindings);
+        List<Map<String,Object>> newFindingStoreHash = new ArrayList<>();
 
         try{
             Object[] issues = objectMapper.readValue(body, Object[].class);
@@ -53,12 +53,16 @@ public class SecretScanParser {
                     Findings find = (Findings) result.get("finding");
                     String hashString = (String) result.get("hashString");
                     Integer ID = (Integer) result.get("ID");
+                    find.setOrgID(orgID);
 
 
-                    Pair<Findings,Integer> temp = Pair.of(find,ID);
 
+                    Map<String,Object> temp = new HashMap<>();
+                    temp.put("hashString",hashString);
+                    temp.put("finding",find);
+                    temp.put("status",find.getStatus());
 
-                    newFindingStoreHash.put(hashString,temp);
+                    newFindingStoreHash.add(temp);
                 }
             }
 
@@ -66,12 +70,10 @@ public class SecretScanParser {
             throw new RuntimeException(e);
         }
 
-        Map<String, Pair<Findings, Integer>> newFindingHashWithoutLocalDup = localDuDupCheck.localDuDupCheck(newFindingStoreHash);
+        List<Map<String,Object>> newFindingHashWithoutLocalDup = localDuDupCheck.localDuDupCheck(newFindingStoreHash);
 
-        List<Findings> findings = globalFindingCheck.getFindingWithoutDup(oldFindingStoreHash,newFindingHashWithoutLocalDup);
 
-        System.out.println(findings.size());
-        return findings;
+        return globalFindingCheck.getFindingWithoutDup(oldFindingStoreHash,newFindingHashWithoutLocalDup);
     }
 
 
@@ -83,6 +85,7 @@ public class SecretScanParser {
         String url = (String) ((Map<?, ?>) issue).get("url");
         String summary = (String) ((Map<?, ?>) issue).get("secret_type_display_name");
         String secret = (String) ((Map<?, ?>) issue).get("secret");
+        Integer number = (Integer) ((Map<?, ?>) issue).get("number");
 
         String repoName = getRepoName.getRepoName(url);
 
@@ -92,6 +95,7 @@ public class SecretScanParser {
 
         Map<String,Object> data = new HashMap<>();
 
+        data.put("number",number);
         data.put("status",ACStatus);
         data.put("repoName",repoName);
         data.put("summary",summary);
@@ -107,6 +111,7 @@ public class SecretScanParser {
         String summary = (String) data.get("summary");
         String secret = (String) data.get("secret");
         String repoName = (String) data.get("repoName");
+        int number = (int) data.get("number");
 
         Integer ID = generateUniqueID.getUniqueID();
 
@@ -116,14 +121,16 @@ public class SecretScanParser {
         Findings find = new Findings();
 
 
+        find.setNumber(number);
         find.setId(ID);
         find.setRepoName(repoName);
         find.setSecretOfSecretScan(secret);
         find.setSummary(summary);
         find.setStatus(status);
-        find.setToolName("SS");
+        find.setToolName("secret scan");
         find.setDescription(STR."\{summary} \{secret}");
         find.setCreatedAt(new Date());
+        find.setUpdatedAt(new Date());
 
         Map<String ,Object> result = new HashMap<>();
 
@@ -134,17 +141,25 @@ public class SecretScanParser {
         return result;
     }
 
-    private Map<String, Long> getHashWithID(Iterable<Findings> findings) {
+    private List<Map<String, Object>> getHashWithID(Iterable<Findings> findings) {
 
-        Map<String,Long> storeHash = new HashMap<>();
+        List<Map<String, Object>> storeHash = new ArrayList<>();
 
         for(Findings find : findings){
             String repoName = find.getRepoName();
             String secret = find.getSecretOfSecretScan();
             String summary = find.getSummary();
             long id = find.getId();
-            String hashString = sha256Hashing.hashing(repoName + secret + summary);;
-            storeHash.put(hashString,id);
+            String status = find.getStatus();
+            String hashString = sha256Hashing.hashing(repoName + secret + summary);
+
+            Map<String,Object> temp = new HashMap<>();
+
+            temp.put("hashString",hashString);
+            temp.put("finding",find);
+            temp.put("status",status);
+
+            storeHash.add(temp);
         }
 
         return storeHash;

@@ -31,13 +31,13 @@ public class CodeScanParser {
     @Autowired
     GetMappingOfFinding getMappingOfFinding;
 
-    public List<Findings> parseCodeScanFinding(String body,Iterable<Findings> oldFindings) {
+    public Map<String,List<Findings>> parseCodeScanFinding(String body,Iterable<Findings> oldFindings,int orgID) {
 
         ObjectMapper objectMapper = new ObjectMapper();
 
 
-        Map<String,Long> oldFindingStoreHash = getHashWithID(oldFindings);
-        Map<String , Pair<Findings,Integer>> newFindingStoreHash = new HashMap<>();
+        List<Map<String,Object>> oldFindingStoreHash = getHashWithID(oldFindings);
+        List<Map<String , Object>> newFindingStoreHash = new ArrayList<>();
 
 
         try{
@@ -53,29 +53,27 @@ public class CodeScanParser {
                     Findings find = (Findings) result.get("finding");
                     String hashString = (String) result.get("hashString");
                     Integer ID = (Integer) result.get("ID");
+                    find.setOrgID(orgID);
 
 
-                    Pair<Findings,Integer> temp = Pair.of(find,ID);
 
+                    Map<String,Object> temp = new HashMap<>();
+                    temp.put("hashString",hashString);
+                    temp.put("finding",find);
+                    temp.put("status",find.getStatus());
 
-                    newFindingStoreHash.put(hashString,temp);
+                    newFindingStoreHash.add(temp);
 
                 }
             }
-
         }catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
 
-        Map<String, Pair<Findings, Integer>> newFindingHashWithoutLocalDup = localDuDupCheck.localDuDupCheck(newFindingStoreHash);
+        List<Map<String,Object>> newFindingHashWithoutLocalDup = localDuDupCheck.localDuDupCheck(newFindingStoreHash);
 
 
-        List<Findings> findings = globalFindingCheck.getFindingWithoutDup(oldFindingStoreHash,newFindingHashWithoutLocalDup);
-
-
-        System.out.println(findings.size());
-        return findings;
-
+        return globalFindingCheck.getFindingWithoutDup(oldFindingStoreHash,newFindingHashWithoutLocalDup);
     }
 
 
@@ -87,8 +85,6 @@ public class CodeScanParser {
 
 
         String repoName = getRepoName.getRepoName(url);
-//        System.out.println(repoName);
-
 
         Integer number = (Integer) ((Map<?, ?>) issue).get("number");
         String securityLevel = (String) ((Map<?, ?>) rule).get("security_severity_level");
@@ -131,6 +127,7 @@ public class CodeScanParser {
 
     private Map<String, Object> makeNewFinding(Map<String ,Object> data){
 
+        int number = (int) data.get("number");
         String pathNameOfIssue = (String) data.get("pathNameOfIssue");
         String startColOfIssue = (String) data.get("startColOfIssue");
         String endColOfIssue = (String) data.get("endColOfIssue");
@@ -144,7 +141,7 @@ public class CodeScanParser {
 
         Findings find = new Findings();
 
-
+        find.setNumber(number);
         find.setId(ID);
         find.setDescription((String) data.get("description"));
         find.setStatus((String) data.get("status"));
@@ -152,7 +149,7 @@ public class CodeScanParser {
         find.setCveScore(0.0);
         find.setProductName("Demo App 1");
         find.setSecurityLevel((String) data.get("securityLevel"));
-        find.setToolName("CS");
+        find.setToolName("code scan");
         find.setPathNameOfIssue((String) data.get("pathNameOfIssue"));
         find.setStartColOfIssue((String) data.get("startColOfIssue"));
         find.setEndColOfIssue((String) data.get("endColOfIssue"));
@@ -160,6 +157,7 @@ public class CodeScanParser {
         find.setEndLineOfIssue((String) data.get("endLineOfIssue"));
         find.setRepoName((String) data.get("repoName"));
         find.setCreatedAt(new Date());
+        find.setUpdatedAt(new Date());
 
 
         Map<String,Object> result = new HashMap<>();
@@ -171,9 +169,9 @@ public class CodeScanParser {
         return result;
     }
 
-    private Map<String, Long> getHashWithID(Iterable<Findings> findings) {
+    private List<Map<String, Object>> getHashWithID(Iterable<Findings> findings) {
 
-        Map<String,Long> storeHash = new HashMap<>();
+        List<Map<String,Object>> storeHash = new ArrayList<>();
         for(Findings find : findings){
             String pathNameOfIssue = find.getPathNameOfIssue();
             String startColOfIssue = find.getStartColOfIssue();
@@ -181,9 +179,17 @@ public class CodeScanParser {
             String startLineOfIssue = find.getStartLineOfIssue();
             String endLineOfIssue = find.getEndLineOfIssue();
             String repoName = find.getRepoName();
+            String status = find.getStatus();
             long id = find.getId();
             String hashString = sha256Hashing.hashing( pathNameOfIssue + startColOfIssue + endColOfIssue + startLineOfIssue + endLineOfIssue + repoName);
-            storeHash.put(hashString,id);
+
+            Map<String,Object> temp = new HashMap<>();
+
+            temp.put("hashString",hashString);
+            temp.put("finding",find);
+            temp.put("status",status);
+
+            storeHash.add(temp);
         }
 
 
