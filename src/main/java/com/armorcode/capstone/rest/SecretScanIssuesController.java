@@ -67,6 +67,7 @@ public class SecretScanIssuesController {
         return Issues;
     }
 
+//    sd
 
     @GetMapping("/issues/secretscan/closed")
     public ResponseEntity<?> updateAlertStatus(@RequestParam long id) throws ClientProtocolException, IOException {
